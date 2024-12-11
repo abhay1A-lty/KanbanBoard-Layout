@@ -1,0 +1,135 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kanban Board</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"></link>
+    <script defer src="https://unpkg.com/react@17/umd/react.development.js"></script>
+    <script defer src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+    <script defer src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script defer src="https://unpkg.com/react-beautiful-dnd@13.1.0/dist/react-beautiful-dnd.min.js"></script>
+</head>
+<body class="bg-gray-100">
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState } = React;
+        const { DragDropContext, Droppable, Draggable } = ReactBeautifulDnd;
+
+        const initialTasks = {
+            'todo': [
+                { id: '1', title: 'Task 1', description: 'Description for Task 1' },
+                { id: '2', title: 'Task 2', description: 'Description for Task 2' },
+            ],
+            'inProgress': [
+                { id: '3', title: 'Task 3', description: 'Description for Task 3' },
+            ],
+            'peerReview': [
+                { id: '4', title: 'Task 4', description: 'Description for Task 4' },
+            ],
+            'done': [
+                { id: '5', title: 'Task 5', description: 'Description for Task 5' },
+            ],
+        };
+
+        const KanbanBoard = () => {
+            const [tasks, setTasks] = useState(initialTasks);
+            const [searchTerm, setSearchTerm] = useState('');
+
+            const onDragEnd = (result) => {
+                const { source, destination } = result;
+                if (!destination) return;
+
+                const sourceColumn = tasks[source.droppableId];
+                const destColumn = tasks[destination.droppableId];
+                const [movedTask] = sourceColumn.splice(source.index, 1);
+                destColumn.splice(destination.index, 0, movedTask);
+
+                setTasks({
+                    ...tasks,
+                    [source.droppableId]: sourceColumn,
+                    [destination.droppableId]: destColumn,
+                });
+            };
+
+            const addTask = (title, description) => {
+                const newTask = {
+                    id: (Math.random() * 10000).toFixed(0),
+                    title,
+                    description,
+                };
+                setTasks({
+                    ...tasks,
+                    'todo': [newTask, ...tasks['todo']],
+                });
+            };
+
+            const filteredTasks = (column) => {
+                return tasks[column].filter(task => 
+                    task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    task.description.toLowerCase().includes(searchTerm.toLowerCase())
+                );
+            };
+
+            return (
+                <div className="container mx-auto p-4">
+                    <div className="flex justify-between items-center mb-4">
+                        <input 
+                            type="text" 
+                            placeholder="Search tasks..." 
+                            className="p-2 border border-gray-300 rounded w-full"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                        <button 
+                            className="ml-4 p-2 bg-blue-500 text-white rounded"
+                            onClick={() => {
+                                const title = prompt('Enter task title');
+                                const description = prompt('Enter task description');
+                                if (title && description) addTask(title, description);
+                            }}
+                        >
+                            <i className="fas fa-plus"></i> Add Task
+                        </button>
+                    </div>
+                    <DragDropContext onDragEnd={onDragEnd}>
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            {['todo', 'inProgress', 'peerReview', 'done'].map(column => (
+                                <Droppable key={column} droppableId={column}>
+                                    {(provided) => (
+                                        <div 
+                                            className="bg-white p-4 rounded shadow-md"
+                                            ref={provided.innerRef}
+                                            {...provided.droppableProps}
+                                        >
+                                            <h2 className="text-xl font-bold mb-4 capitalize">{column.replace(/([A-Z])/g, ' $1')}</h2>
+                                            {filteredTasks(column).map((task, index) => (
+                                                <Draggable key={task.id} draggableId={task.id} index={index}>
+                                                    {(provided) => (
+                                                        <div 
+                                                            className="bg-gray-100 p-4 mb-4 rounded shadow-sm"
+                                                            ref={provided.innerRef}
+                                                            {...provided.draggableProps}
+                                                            {...provided.dragHandleProps}
+                                                        >
+                                                            <h3 className="font-bold">{task.title}</h3>
+                                                            <p>{task.description}</p>
+                                                        </div>
+                                                    )}
+                                                </Draggable>
+                                            ))}
+                                            {provided.placeholder}
+                                        </div>
+                                    )}
+                                </Droppable>
+                            ))}
+                        </div>
+                    </DragDropContext>
+                </div>
+            );
+        };
+
+        ReactDOM.render(<KanbanBoard />, document.getElementById('root'));
+    </script>
+</body>
+</html>
